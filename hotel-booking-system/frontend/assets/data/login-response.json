@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "message": "Login successful",
+  "user": {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "demo@luxestay.com",
+    "token": "demo-jwt-token-abc123"
+  },
+  "redirect": "/hotel-booking-system/profile.php"
+}

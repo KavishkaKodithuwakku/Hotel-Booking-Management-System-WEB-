@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "message": "Account created successfully",
+  "user": {
+    "id": 2,
+    "firstName": "New",
+    "lastName": "Member",
+    "email": "newuser@example.com"
+  },
+  "redirect": "/hotel-booking-system/login.php"
+}

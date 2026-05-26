@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "message": "Booking confirmed",
+  "booking": {
+    "id": "BK-2026-0942",
+    "hotel": "Grand Luxe Resort",
+    "checkIn": "2026-06-15",
+    "checkOut": "2026-06-20",
+    "total": 1920,
+    "status": "confirmed"
+  }
+}

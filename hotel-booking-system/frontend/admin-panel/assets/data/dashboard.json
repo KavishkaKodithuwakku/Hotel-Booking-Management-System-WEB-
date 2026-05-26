@@ -1,0 +1,18 @@
+{
+  "stats": {
+    "totalRevenue": 328450,
+    "revenueChange": 12.4,
+    "totalBookings": 1847,
+    "bookingsChange": 8.2,
+    "activeHotels": 24,
+    "hotelsChange": 2,
+    "totalUsers": 5621,
+    "usersChange": 15.3
+  },
+  "recentBookings": [
+    {"id": "BK-2026-4521", "guest": "Sarah Mitchell", "hotel": "Grand Luxe Resort", "checkIn": "2026-06-01", "amount": 1047, "status": "confirmed"},
+    {"id": "BK-2026-4518", "guest": "James Chen", "hotel": "Azure Palm Dubai", "checkIn": "2026-05-28", "amount": 2145, "status": "pending"},
+    {"id": "BK-2026-4512", "guest": "Emma Wilson", "hotel": "Ocean Pearl Maldives", "checkIn": "2026-06-15", "amount": 3594, "status": "confirmed"},
+    {"id": "BK-2026-4509", "guest": "Michael Brown", "hotel": "Tokyo Imperial Tower", "checkIn": "2026-05-30", "amount": 837, "status": "cancelled"}
+  ]
+}
