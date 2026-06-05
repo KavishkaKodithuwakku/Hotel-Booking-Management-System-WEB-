@@ -399,6 +399,7 @@
   /* ---------- Contact & Newsletter ---------- */
   function initMiscForms() {
     document.getElementById('contactForm')?.addEventListener('submit', (e) => {
+      if (window.LuxeApi) return;
       e.preventDefault();
       if (!validateForm(e.target)) return;
       showToast('Message sent! We will respond within 24 hours (demo).');

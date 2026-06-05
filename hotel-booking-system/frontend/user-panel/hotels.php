@@ -1,6 +1,12 @@
 <?php
+require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Hotels';
 $bodyClass = 'page-hotels';
+$extraCss = ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'];
+$extraJs = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    $assetPath . '/js/map.js',
+];
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/components/navbar.php';
 ?>
@@ -46,10 +52,27 @@ require_once __DIR__ . '/components/navbar.php';
                         </div>
                     </div>
                 </div>
+
+                <div class="hotels-view-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h2 class="hotels-map-heading mb-0"><i class="fas fa-map-marked-alt text-gold me-2"></i>Hotel Locations</h2>
+                    <div class="btn-group hotels-view-toggle" id="hotelsViewToggle" role="group" aria-label="View mode">
+                        <button type="button" class="btn btn-lux-outline btn-sm active" data-view="both">Map & List</button>
+                        <button type="button" class="btn btn-lux-outline btn-sm" data-view="map">Map Only</button>
+                        <button type="button" class="btn btn-lux-outline btn-sm" data-view="list">List Only</button>
+                    </div>
+                </div>
+
+                <div class="lux-map-card lux-card mb-4" id="hotelsMapWrap">
+                    <div id="hotelsMap" class="lux-map-container" aria-label="Map showing hotel locations"></div>
+                    <p class="lux-map-hint mb-0"><i class="fas fa-info-circle me-1"></i> Click a marker for details. Use the <i class="fas fa-map-marked-alt"></i> button on a hotel card to locate it on the map.</p>
+                </div>
+
+                <div id="hotelsListWrap">
                 <div class="loading-overlay d-none" id="hotelsLoading">
                     <div class="lux-spinner"></div>
                 </div>
                 <div class="row g-4" id="hotelsGrid"></div>
+                </div>
                 <div class="empty-state d-none" id="hotelsEmpty">
                     <i class="fas fa-hotel fa-3x text-gold mb-3"></i>
                     <h4>No hotels found</h4>

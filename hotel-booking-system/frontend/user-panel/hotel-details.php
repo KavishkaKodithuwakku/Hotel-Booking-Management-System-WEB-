@@ -1,7 +1,13 @@
 <?php
+require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Hotel Details';
 $bodyClass = 'page-hotel-details';
 $hotelId = $_GET['id'] ?? '1';
+$extraCss = ['https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'];
+$extraJs = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    $assetPath . '/js/map.js',
+];
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/components/navbar.php';
 ?>
@@ -46,14 +52,18 @@ require_once __DIR__ . '/components/navbar.php';
                         <span class="rating-badge" id="hotelRatingBadge">4.9</span>
                     </div>
                     <h1 class="hotel-detail-title" id="hotelDetailName">Grand Luxe Resort</h1>
-                    <p class="text-muted" id="hotelDetailLocation"><i class="fas fa-map-marker-alt text-gold me-1"></i> Paris, France</p>
+                    <p class="text-muted mb-1" id="hotelDetailLocation"><i class="fas fa-map-marker-alt text-gold me-1"></i> Paris, France</p>
+                    <p class="small text-muted mb-3" id="hotelDetailAddress">12 Avenue des Champs-Élysées, 75008 Paris, France</p>
+                    <a href="#" id="hotelDirectionsLink" class="btn btn-lux-outline btn-sm mb-3 d-none" target="_blank" rel="noopener">
+                        <i class="fas fa-directions me-1"></i> Get Directions
+                    </a>
                     <p class="hotel-description" id="hotelDetailDesc">Experience unparalleled luxury in the heart of Paris. Elegant rooms, Michelin-star dining, and world-class spa facilities await.</p>
                     <div class="price-block my-4">
                         <span class="price-from">From</span>
                         <span class="price-amount-lg" id="hotelDetailPrice">$349</span>
                         <span class="price-night">/ night</span>
                     </div>
-                    <form id="availabilityForm" class="availability-form">
+                    <form id="availabilityForm" class="availability-form" data-hotel-id="<?= htmlspecialchars($hotelId) ?>">
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="form-label small">Check-in</label>
@@ -82,6 +92,13 @@ require_once __DIR__ . '/components/navbar.php';
                     </form>
                 </div>
             </div>
+        </div>
+
+        <!-- Location Map -->
+        <div class="lux-card p-4 mb-5">
+            <h3 class="section-subtitle mb-3"><i class="fas fa-map-marked-alt text-gold me-2"></i>Hotel Location</h3>
+            <p class="text-muted small mb-3">Find us on the map — exact address and directions to the property.</p>
+            <div id="hotelLocationMap" class="lux-map-container lux-map-container-detail"></div>
         </div>
 
         <!-- Facilities -->

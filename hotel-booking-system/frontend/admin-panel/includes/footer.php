@@ -4,9 +4,13 @@
 window.ADMIN_CONFIG = {
     baseUrl: '<?= $pagePath ?>',
     assetPath: '<?= $assetPath ?>',
+    apiBaseUrl: '<?= $apiBaseUrl ?>',
     userPanelUrl: '<?= $userPanelPath ?>'
 };
+window.LUXE_CONFIG = { apiBaseUrl: '<?= $apiBaseUrl ?>' };
 </script>
+<script src="<?= $userPanelPath ?>/assets/js/api-client.js"></script>
+<script src="<?= $assetPath ?>/js/api-admin.js"></script>
 <script src="<?= $assetPath ?>/js/admin.js"></script>
 <?php if (!empty($extraJs)): foreach ($extraJs as $js): ?>
 <script src="<?= htmlspecialchars($js) ?>"></script>

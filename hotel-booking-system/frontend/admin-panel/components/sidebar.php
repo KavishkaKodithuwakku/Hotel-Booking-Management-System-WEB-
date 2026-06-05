@@ -13,6 +13,8 @@ $navItems = [
     ['file' => 'revenue.php', 'icon' => 'fa-coins', 'label' => 'Revenue'],
     ['file' => 'reports.php', 'icon' => 'fa-file-alt', 'label' => 'Reports'],
     ['file' => 'images.php', 'icon' => 'fa-images', 'label' => 'Hotel Images'],
+    ['file' => 'reviews.php', 'icon' => 'fa-star', 'label' => 'Reviews'],
+    ['file' => 'support.php', 'icon' => 'fa-headset', 'label' => 'Support'],
     ['file' => 'notifications.php', 'icon' => 'fa-bell', 'label' => 'Notifications'],
 ];
 ?>

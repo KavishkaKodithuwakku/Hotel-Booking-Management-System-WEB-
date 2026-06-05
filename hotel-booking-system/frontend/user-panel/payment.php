@@ -26,11 +26,12 @@ require_once __DIR__ . '/components/navbar.php';
 
                     <div class="payment-amount-box text-center mb-4">
                         <span class="text-muted">Amount Due</span>
-                        <h2 class="text-gold mb-0" id="paymentAmount">$1,920.00</h2>
-                        <small class="text-muted">Booking #BK-2026-0847</small>
+                        <h2 class="text-gold mb-0" id="paymentAmount">$–</h2>
+                        <small class="text-muted" id="paymentBookingRef">Loading booking…</small>
                     </div>
 
                     <form id="paymentForm">
+                        <input type="hidden" id="hiddenBookingId" name="booking_id">
                         <div class="payment-methods row g-3 mb-4">
                             <div class="col-4">
                                 <label class="payment-card-option">
@@ -54,11 +55,12 @@ require_once __DIR__ . '/components/navbar.php';
 
                         <div class="mb-3">
                             <label class="form-label">Cardholder Name</label>
-                            <input type="text" class="form-control lux-input" required>
+                            <input type="text" class="form-control lux-input" id="cardName" placeholder="John Doe" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Card Number</label>
-                            <input type="text" class="form-control lux-input" placeholder="0000 0000 0000 0000" maxlength="19" required>
+                            <input type="text" class="form-control lux-input" id="cardNumber"
+                                   placeholder="0000 0000 0000 0000" maxlength="19" required>
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-6">
@@ -79,13 +81,71 @@ require_once __DIR__ . '/components/navbar.php';
                     <div class="payment-success d-none text-center py-4" id="paymentSuccess">
                         <i class="fas fa-check-circle text-gold fa-4x mb-3"></i>
                         <h3>Payment Successful!</h3>
-                        <p class="text-muted">Your booking is now confirmed.</p>
-                        <a href="<?= $pagePath ?>/booking-history.php" class="btn btn-lux-primary">View Booking History</a>
+                        <p class="text-muted" id="paySuccessMsg">Your booking is now confirmed.</p>
+                        <a href="<?= $pagePath ?>/booking-history.php" class="btn btn-lux-primary mt-2">View Booking History</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
+
+<script>
+(function(){
+    // Read booking_id from URL query
+    const params    = new URLSearchParams(window.location.search);
+    const bookingId = params.get('booking_id');
+
+    function loadBookingDetails(){
+        if(!bookingId || !window.LuxeApi || !window.LuxeApi.getToken()) return;
+
+        window.LuxeApi.get('/bookings').then(function(data){
+            const bks     = data.bookings||[];
+            const booking = bks.find(function(b){ return String(b.id) === String(bookingId); });
+            if(!booking) return;
+            document.getElementById('paymentAmount').textContent  = '$'+Number(booking.total_amount).toLocaleString();
+            document.getElementById('paymentBookingRef').textContent = 'Booking #'+booking.booking_ref;
+            document.getElementById('hiddenBookingId').value      = bookingId;
+        }).catch(function(){});
+    }
+
+    loadBookingDetails();
+
+    document.getElementById('paymentForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        if(!bookingId){
+            window.showToast && window.showToast('No booking selected','error');
+            return;
+        }
+        const btn = document.getElementById('payNowBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing…';
+
+        window.LuxeApi.post('/payments/process', {
+            booking_id:     bookingId,
+            card_number:    document.getElementById('cardNumber').value,
+            payment_method: document.querySelector('input[name="payMethod"]:checked').value,
+        }).then(function(data){
+            document.getElementById('paymentForm').classList.add('d-none');
+            document.getElementById('paymentSuccess').classList.remove('d-none');
+            document.getElementById('paySuccessMsg').textContent =
+                'Transaction ID: ' + (data.transaction_id||'') + '. Your booking is now confirmed!';
+        }).catch(function(err){
+            window.showToast && window.showToast(err.message||'Payment failed','error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Pay Now';
+        });
+    });
+
+    // Card number formatting
+    const cardInput = document.getElementById('cardNumber');
+    if(cardInput){
+        cardInput.addEventListener('input', function(){
+            let v = this.value.replace(/\D/g,'').slice(0,16);
+            this.value = v.replace(/(.{4})/g,'$1 ').trim();
+        });
+    }
+})();
+</script>
 
 <?php require_once __DIR__ . '/components/footer.php'; ?>

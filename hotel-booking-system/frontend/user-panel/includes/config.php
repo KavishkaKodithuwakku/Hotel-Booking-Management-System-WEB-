@@ -1,12 +1,14 @@
 <?php
 /**
- * Frontend configuration — no database or backend logic.
+ * User panel configuration.
  */
 define('SITE_NAME', 'LuxeStay');
 define('SITE_TAGLINE', 'Luxury Hotel Booking');
 
-// Base URL for assets and page links
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
-$baseUrl = rtrim($scriptDir, '/');
-$assetPath = $baseUrl . '/assets';
-$pagePath = $baseUrl;
+$pagePath = rtrim($scriptDir, '/');
+$assetPath = $pagePath . '/assets';
+$frontendPath = dirname($pagePath);
+$projectPath = dirname($frontendPath);
+$apiBaseUrl = $projectPath . '/backend/api';
+$adminPath = $frontendPath . '/admin-panel';

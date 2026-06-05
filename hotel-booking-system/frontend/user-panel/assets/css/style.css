@@ -1211,3 +1211,133 @@ a { text-decoration: none; transition: var(--transition); }
   height: 100%;
   transition: width 0.3s, background 0.3s;
 }
+
+/* ---- Hotel Maps (Leaflet) ---- */
+.lux-map-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.lux-map-container {
+  width: 100%;
+  height: 420px;
+  min-height: 280px;
+  z-index: 1;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.lux-map-container-detail {
+  height: 360px;
+  border-radius: var(--radius);
+}
+
+.lux-map-hint {
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  background: var(--off-white);
+  border-top: 1px solid var(--gray-100);
+}
+
+.hotels-map-heading {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--navy-dark);
+}
+
+.hotels-view-toggle .btn.active {
+  background: var(--navy-dark);
+  color: var(--white) !important;
+  border-color: var(--navy-dark);
+}
+
+.hotel-card-highlight {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+  border-radius: var(--radius);
+}
+
+.hotel-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hotel-card-footer .btn-show-on-map {
+  padding: 0.35rem 0.6rem;
+}
+
+.lux-map-marker {
+  background: transparent;
+  border: none;
+}
+
+.lux-map-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: var(--navy-dark);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 4px 12px rgba(10, 22, 40, 0.35);
+  font-size: 0.85rem;
+}
+
+.lux-map-marker-pin i {
+  transform: rotate(45deg);
+}
+
+.lux-map-popup {
+  font-family: var(--font);
+  min-width: 200px;
+}
+
+.lux-map-popup-img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.lux-map-popup h6 {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--navy-dark);
+}
+
+.lux-map-popup-loc {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  margin-bottom: 0.35rem;
+}
+
+.lux-map-popup-price {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.lux-map-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.lux-map-popup-actions .btn {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.leaflet-popup-content {
+  margin: 10px 12px;
+}

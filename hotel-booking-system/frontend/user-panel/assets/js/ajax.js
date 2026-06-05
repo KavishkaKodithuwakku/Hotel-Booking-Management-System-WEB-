@@ -1,70 +1,15 @@
 /**
- * LuxeStay — AJAX Frontend Examples
- * Uses dummy JSON files — NO backend/database connection
+ * LuxeStay — User panel API integration
  */
-
 (function () {
   'use strict';
 
-  const config = window.LUXE_CONFIG || { baseUrl: '', assetPath: '' };
-  const dataPath = config.assetPath + '/data';
+  const config = window.LUXE_CONFIG || { baseUrl: '', assetPath: '', apiBaseUrl: '' };
 
-  /**
-   * Simulated API delay for realistic UX
-   */
-  function simulateDelay(ms = 600) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Fetch dummy JSON (frontend-only mock API)
-   */
-  async function fetchMock(endpoint, options = {}) {
-    const { method = 'GET', body = null } = options;
-    await simulateDelay(method === 'GET' ? 400 : 800);
-
-    const files = {
-      hotels: dataPath + '/hotels.json',
-      login: dataPath + '/login-response.json',
-      register: dataPath + '/register-response.json',
-      booking: dataPath + '/booking-response.json',
-      availability: dataPath + '/availability-response.json',
-    };
-
-    const url = files[endpoint];
-    if (!url) throw new Error('Unknown mock endpoint: ' + endpoint);
-
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Failed to load mock data');
-    let data = await response.json();
-
-    if (endpoint === 'login' && body) {
-      if (body.email === 'fail@demo.com') {
-        return { success: false, message: 'Invalid email or password' };
-      }
-      data.user.email = body.email || data.user.email;
-    }
-
-    if (endpoint === 'register' && body) {
-      data.user.firstName = body.firstName || data.user.firstName;
-      data.user.email = body.email || data.user.email;
-    }
-
-    if (endpoint === 'booking' && body) {
-      data.booking.id = 'BK-2026-' + Math.floor(1000 + Math.random() * 9000);
-      if (body.checkIn) data.booking.checkIn = body.checkIn;
-      if (body.checkOut) data.booking.checkOut = body.checkOut;
-    }
-
-    return data;
-  }
-
-  /**
-   * Build hotel card HTML from JSON item
-   */
   function renderHotelCard(hotel) {
     const detailUrl = config.baseUrl + '/hotel-details.php?id=' + hotel.id;
-    return `
+    const rating = parseFloat(hotel.rating) || 0;
+  return `
       <div class="col-md-6 col-xl-4">
         <article class="hotel-card lux-card" data-hotel-id="${hotel.id}" data-price="${hotel.price}" data-stars="${hotel.stars}">
           <div class="hotel-card-image">
@@ -80,7 +25,7 @@
                 <p class="hotel-card-location"><i class="fas fa-map-marker-alt text-gold me-1"></i>${hotel.location}</p>
               </div>
               <div class="hotel-rating">
-                <span class="rating-value">${hotel.rating.toFixed(1)}</span>
+                <span class="rating-value">${rating.toFixed(1)}</span>
                 <small class="text-muted d-block">${hotel.reviews} reviews</small>
               </div>
             </div>
@@ -90,16 +35,16 @@
                 <span class="price-amount">$${hotel.price}</span>
                 <span class="price-night">/ night</span>
               </div>
+              <div class="d-flex gap-1">
               <a href="${detailUrl}" class="btn btn-lux-primary btn-sm">View Details</a>
+              ${hotel.lat != null ? `<button type="button" class="btn btn-lux-outline btn-sm btn-show-on-map" data-hotel-id="${hotel.id}" title="Show on map"><i class="fas fa-map-marked-alt"></i></button>` : ''}
+              </div>
             </div>
           </div>
         </article>
       </div>`;
   }
 
-  /**
-   * Filter hotels client-side after AJAX load
-   */
   function filterHotels(hotels, filters) {
     let result = [...hotels];
     const q = (filters.query || '').toLowerCase();
@@ -110,108 +55,104 @@
 
     if (q) {
       result = result.filter(
-        (h) =>
-          h.name.toLowerCase().includes(q) ||
-          h.location.toLowerCase().includes(q)
+        (h) => h.name.toLowerCase().includes(q) || h.location.toLowerCase().includes(q)
       );
     }
-    if (dest) {
-      result = result.filter((h) => h.destination === dest);
-    }
-    if (stars) {
-      result = result.filter((h) => h.stars >= stars);
-    }
-    if (maxPrice && maxPrice < 2000) {
-      result = result.filter((h) => h.price <= maxPrice);
-    }
+    if (dest) result = result.filter((h) => h.destination === dest);
+    if (stars) result = result.filter((h) => h.stars >= stars);
+    if (maxPrice && maxPrice < 2000) result = result.filter((h) => h.price <= maxPrice);
     if (amenities.length) {
-      result = result.filter((h) =>
-        amenities.every((a) => (h.amenities || []).includes(a))
-      );
+      result = result.filter((h) => amenities.every((a) => (h.amenities || []).includes(a)));
     }
     return result;
   }
 
-  let cachedHotels = [];
+  function bindHotelCardEvents() {
+    document.querySelectorAll('.btn-favorite').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        btn.classList.toggle('active');
+        const icon = btn.querySelector('i');
+        icon.classList.toggle('far');
+        icon.classList.toggle('fas');
+      });
+    });
 
-  /**
-   * AJAX: Load hotels (hotel search / listing)
-   */
+    document.querySelectorAll('.btn-show-on-map').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const id = btn.dataset.hotelId;
+        document.getElementById('hotelsMapWrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('hotelsViewToggle')?.querySelector('[data-view="both"]')?.click();
+        setTimeout(() => window.LuxeMap?.highlightHotel(id), 400);
+      });
+    });
+  }
+
   async function loadHotels(filters = {}) {
     const grid = document.getElementById('hotelsGrid');
     const loading = document.getElementById('hotelsLoading');
     const empty = document.getElementById('hotelsEmpty');
     const countEl = document.getElementById('resultsCount');
-
     if (!grid) return;
 
     loading?.classList.remove('d-none');
     empty?.classList.add('d-none');
 
     try {
-      const data = await fetchMock('hotels');
-      cachedHotels = data.hotels || [];
+      const params = new URLSearchParams();
+      const urlParams = new URLSearchParams(window.location.search);
+      if (filters.query || urlParams.get('q')) params.set('q', filters.query || urlParams.get('q'));
+      if (filters.destination || urlParams.get('destination')) {
+        params.set('destination', filters.destination || urlParams.get('destination'));
+      }
+      if (filters.stars) params.set('stars', filters.stars);
+      if (filters.maxPrice) params.set('maxPrice', filters.maxPrice);
+      if (filters.sort) params.set('sort', filters.sort);
 
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('q')) filters.query = params.get('q');
-      if (params.get('destination')) filters.destination = params.get('destination');
+      const data = await window.LuxeApi.get('/hotels?' + params.toString());
+      let hotels = data.hotels || [];
 
-      const filtered = filterHotels(cachedHotels, filters);
-      grid.innerHTML = filtered.map(renderHotelCard).join('');
+      if (filters.amenities?.length) {
+        hotels = filterHotels(hotels, filters);
+      }
+
+      grid.innerHTML = hotels.map(renderHotelCard).join('');
+      document.dispatchEvent(new CustomEvent('hotelsLoaded', { detail: { hotels } }));
 
       if (countEl) {
-        countEl.textContent = filtered.length + ' hotel' + (filtered.length !== 1 ? 's' : '') + ' found';
+        countEl.textContent = hotels.length + ' hotel' + (hotels.length !== 1 ? 's' : '') + ' found';
       }
-      empty?.classList.toggle('d-none', filtered.length > 0);
-
-      document.querySelectorAll('.btn-favorite').forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-          btn.classList.toggle('active');
-          const icon = btn.querySelector('i');
-          icon.classList.toggle('far');
-          icon.classList.toggle('fas');
-        });
-      });
+      empty?.classList.toggle('d-none', hotels.length > 0);
+      bindHotelCardEvents();
     } catch (err) {
       console.error(err);
       if (countEl) countEl.textContent = 'Error loading hotels';
-      window.showToast?.('Could not load hotels. Check console.', 'error');
+      window.showToast?.(err.message || 'Could not load hotels', 'error');
     } finally {
       loading?.classList.add('d-none');
     }
   }
 
-  /**
-   * AJAX: Filter hotels
-   */
   async function filterHotelsAjax(formData) {
-    const filters = {
+    await loadHotels({
       destination: formData.get('destination') || '',
       stars: formData.get('stars') || '',
       maxPrice: formData.get('maxPrice') || 2000,
       amenities: formData.getAll('amenities[]'),
-    };
-    await loadHotels(filters);
+    });
     window.showToast?.('Filters applied', 'success');
   }
 
-  /**
-   * AJAX: Hotel search (debounced text search)
-   */
   let searchTimeout;
   function initHotelSearch() {
     const input = document.getElementById('hotelSearchInput');
     const form = document.getElementById('hotelSearchForm');
     if (!input) return;
-
     const runSearch = () => {
       clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        loadHotels({ query: input.value.trim() });
-      }, 400);
+      searchTimeout = setTimeout(() => loadHotels({ query: input.value.trim() }), 400);
     };
-
     input.addEventListener('input', runSearch);
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -219,9 +160,6 @@
     });
   }
 
-  /**
-   * AJAX: Login form submission
-   */
   function initLoginAjax() {
     const form = document.getElementById('loginForm');
     if (!form) return;
@@ -237,27 +175,22 @@
         return;
       }
 
-      const body = {
-        email: form.email.value,
-        password: form.password.value,
-      };
-
       btn.disabled = true;
       btnText?.classList.add('d-none');
       loader?.classList.remove('d-none');
 
       try {
-        const data = await fetchMock('login', { method: 'POST', body });
-        if (data.success) {
-          window.showToast?.(data.message || 'Login successful!');
-          setTimeout(() => {
-            window.location.href = config.baseUrl + '/profile.php';
-          }, 1200);
-        } else {
-          window.showToast?.(data.message || 'Login failed', 'error');
-        }
+        const data = await window.LuxeApi.post('/auth/login', {
+          email: form.email.value,
+          password: form.password.value,
+        });
+        window.LuxeApi.setToken(data.token);
+        window.showToast?.(data.message || 'Login successful!');
+        setTimeout(() => {
+          window.location.href = config.baseUrl + '/profile.php';
+        }, 800);
       } catch (err) {
-        window.showToast?.('Connection error (demo)', 'error');
+        window.showToast?.(err.message || 'Login failed', 'error');
       } finally {
         btn.disabled = false;
         btnText?.classList.remove('d-none');
@@ -266,19 +199,13 @@
     });
   }
 
-  /**
-   * AJAX: Registration form submission
-   */
   function initRegisterAjax() {
     const form = document.getElementById('registerForm');
     if (!form) return;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      const pass = form.password.value;
-      const confirm = form.confirmPassword.value;
-      if (pass !== confirm) {
+      if (form.password.value !== form.confirmPassword.value) {
         window.showToast?.('Passwords do not match', 'error');
         return;
       }
@@ -286,28 +213,25 @@
       const btn = document.getElementById('registerSubmitBtn');
       const btnText = btn?.querySelector('.btn-text');
       const loader = btn?.querySelector('.btn-loader');
-
-      const body = {
-        firstName: form.firstName.value,
-        lastName: form.lastName.value,
-        email: form.email.value,
-        phone: form.phone.value,
-      };
-
       btn.disabled = true;
       btnText?.classList.add('d-none');
       loader?.classList.remove('d-none');
 
       try {
-        const data = await fetchMock('register', { method: 'POST', body });
-        if (data.success) {
-          window.showToast?.(data.message || 'Account created!');
-          setTimeout(() => {
-            window.location.href = config.baseUrl + '/login.php';
-          }, 1500);
-        }
+        const data = await window.LuxeApi.post('/auth/register', {
+          firstName: form.firstName.value,
+          lastName: form.lastName.value,
+          email: form.email.value,
+          phone: form.phone?.value || '',
+          password: form.password.value,
+        });
+        window.LuxeApi.setToken(data.token);
+        window.showToast?.(data.message || 'Account created!');
+        setTimeout(() => {
+          window.location.href = config.baseUrl + '/profile.php';
+        }, 1000);
       } catch (err) {
-        window.showToast?.('Registration failed (demo)', 'error');
+        window.showToast?.(err.message || 'Registration failed', 'error');
       } finally {
         btn.disabled = false;
         btnText?.classList.remove('d-none');
@@ -316,26 +240,17 @@
     });
   }
 
-  /**
-   * AJAX: Booking form submission
-   */
   function initBookingAjax() {
     const form = document.getElementById('bookingForm');
     if (!form) return;
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      const required = form.querySelectorAll('[required]');
-      let valid = true;
-      required.forEach((f) => {
-        if (!f.value.trim()) {
-          f.classList.add('is-invalid');
-          valid = false;
-        } else f.classList.remove('is-invalid');
-      });
-      if (!valid) {
-        window.showToast?.('Please fill in all required fields', 'error');
+      if (!window.LuxeApi.getToken()) {
+        window.showToast?.('Please login to complete booking', 'error');
+        setTimeout(() => {
+          window.location.href = config.baseUrl + '/login.php';
+        }, 1200);
         return;
       }
 
@@ -343,25 +258,34 @@
       btn.disabled = true;
       btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
 
-      const body = {
-        firstName: form.firstName.value,
-        lastName: form.lastName.value,
-        email: form.email.value,
-        checkIn: form.checkIn.value,
-        checkOut: form.checkOut.value,
-        roomType: form.roomType.value,
-      };
-
       try {
-        const data = await fetchMock('booking', { method: 'POST', body });
-        if (data.success) {
+        const params = new URLSearchParams(window.location.search);
+        const data = await window.LuxeApi.post('/bookings', {
+          hotel_id: parseInt(params.get('hotel') || form.hotel_id?.value || 1, 10),
+          room_id: parseInt(form.room_id?.value || params.get('room_id') || 1, 10),
+          check_in: form.checkIn.value,
+          check_out: form.checkOut.value,
+          guests: parseInt(form.guests?.value || 2, 10),
+          firstName: form.firstName.value,
+          lastName: form.lastName.value,
+          email: form.email.value,
+          payment_method: 'card',
+          card_number: form.cardNumber?.value || '',
+        });
+
+        if (data.booking) {
           const refEl = document.getElementById('bookingRefDisplay');
-          if (refEl) refEl.textContent = data.booking.id;
+          if (refEl) refEl.textContent = data.booking.booking_ref || data.booking.id;
+          // Store booking id so payment page can load it
+          sessionStorage.setItem('pendingBookingId', data.booking.id);
           new bootstrap.Modal(document.getElementById('bookingConfirmModal')).show();
-          window.showToast?.('Booking confirmed!');
+          window.showToast?.('Booking created! Proceed to payment.');
+          // Update pay-now link in modal if present
+          const payLink = document.getElementById('bookingPayLink');
+          if (payLink) payLink.href = config.baseUrl + '/payment.php?booking_id=' + data.booking.id;
         }
       } catch (err) {
-        window.showToast?.('Booking failed (demo)', 'error');
+        window.showToast?.(err.message || 'Booking failed', 'error');
       } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-lock me-2"></i>Confirm Booking';
@@ -369,29 +293,52 @@
     });
   }
 
-  /**
-   * AJAX: Room availability check
-   */
   async function checkAvailability(dates) {
-    const data = await fetchMock('availability', { method: 'POST', body: dates });
-    return data;
+    const form = document.getElementById('availabilityForm');
+    const hotelId = form?.dataset?.hotelId || new URLSearchParams(window.location.search).get('id');
+    const body = {
+      check_in: dates.checkIn,
+      check_out: dates.checkOut,
+      hotel_id: hotelId ? parseInt(hotelId, 10) : null,
+      room_id: dates.room_id || null,
+    };
+    return window.LuxeApi.post('/availability/check', body);
   }
 
-  /**
-   * Filter form handler
-   */
+  async function fetchHotels() {
+    const data = await window.LuxeApi.get('/hotels');
+    return data.hotels || [];
+  }
+
   function initFilterForm() {
     const form = document.getElementById('hotelFilterForm');
     if (!form) return;
-
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const fd = new FormData(form);
-      filterHotelsAjax(fd);
+      filterHotelsAjax(new FormData(form));
     });
-
     document.getElementById('resetFilters')?.addEventListener('click', () => {
       setTimeout(() => loadHotels({}), 100);
+    });
+  }
+
+  function initContactAjax() {
+    const form = document.getElementById('contactForm');
+    if (!form) return;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await window.LuxeApi.post('/contact', {
+          name: form.name.value,
+          email: form.email.value,
+          subject: form.subject?.value || 'Contact',
+          message: form.message.value,
+        });
+        window.showToast?.('Message sent successfully!');
+        form.reset();
+      } catch (err) {
+        window.showToast?.(err.message, 'error');
+      }
     });
   }
 
@@ -399,7 +346,7 @@
     loadHotels,
     filterHotelsAjax,
     checkAvailability,
-    fetchMock,
+    fetchHotels,
   };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -408,5 +355,6 @@
     initRegisterAjax();
     initBookingAjax();
     initFilterForm();
+    initContactAjax();
   });
 })();
